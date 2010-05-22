@@ -10,6 +10,206 @@
 #include <memory.h>
 #include <pthread.h>
 
+
+
+#include "gstutils.h"
+#include "hashutils.h"
+#include "edgedetect.h"
+#include "complabeling.h"
+#include "complabeling_dumb.h"
+
+
+
+
+enum
+  {
+    WIDTH_OPT=0,
+    HEIGHT_OPT,
+    THRESHOLD_OPT,
+    VERBOSE_OPT,
+    NUMLINES_OPT,
+    DISCRETE_OPT,
+    SERV_OPT,
+    RADIUS_OPT,
+    BGTHRESHOLD_OPT,
+    GRAY_OPT,
+    MINWIDTH_OPT,
+    R_OPT,
+    G_OPT,
+    B_OPT,
+    AVGCORR_OPT,
+    THE_END
+  };
+
+const char *se_opts[] =
+  {
+    [WIDTH_OPT] = "width",
+    [HEIGHT_OPT] = "height",
+    [THRESHOLD_OPT] = "threshold",
+    [VERBOSE_OPT] = "verbose",
+    [NUMLINES_OPT] = "lines",
+    [DISCRETE_OPT] = "discrete",
+    [SERV_OPT] = "s",
+    [RADIUS_OPT] = "radius",
+    //
+    [BGTHRESHOLD_OPT] = "bgthreshold",
+    [GRAY_OPT] = "gray",
+    [MINWIDTH_OPT] = "minwidth",
+    [R_OPT] = "r",
+    [G_OPT] = "g",
+    [B_OPT] = "b",
+    [AVGCORR_OPT] = "avgcorr",
+    //
+    [THE_END] = NULL
+  };
+
+enum
+  {
+    EDGEDETECT_OPT=0,
+    COMPLABELING_OPT,
+    COMPLABELING_SIMP_OPT,
+    LIGHTS_OPT,
+    THEM_END
+  };
+
+const char *me_opts[] =
+  {
+    [EDGEDETECT_OPT] = "edgedetect",
+    [COMPLABELING_OPT] = "complabeling",
+    [COMPLABELING_SIMP_OPT] = "cl_simp",
+    [LIGHTS_OPT] = "lights",
+    [THEM_END] = NULL
+  };
+
+
+void ecv_clainit(int argc, char **argv, ecv_cla * m_cla)
+{
+  char *subopts, *value;
+  int opt; 
+
+  m_cla->width = 320;
+  m_cla->height = 240;
+  m_cla->threshold = 0;
+  m_cla->debugwin = 0;
+  m_cla->numlines = 4;
+  m_cla->discrete = 3;
+  m_cla->serv = 0;
+  m_cla->radius = 30;
+  m_cla->method = ECV_EDGEDETECT;
+  m_cla->gray = 1;
+  m_cla->r = 0;
+  m_cla->g = 0;
+  m_cla->b = 0;
+  m_cla->discardlevel=50;
+  m_cla->minwidth=50;
+  m_cla->avgcorrection=0;
+
+  while ((opt = getopt (argc, argv, "hd:o:m:")) != -1)
+    switch (opt)
+      {
+      case 'h':
+	printf ("simevo -d </dev/devname> -m edgedetect -o [width=int,height=int,threshold=int,verbose,lines=int,discrete=3+3*int,s,radius=int]\n");
+	printf ("\nedgedetect - edge recognition based method\n");
+	printf ("s - start server for lua module\n");
+	printf ("raduis - not implemented yet\n");
+	printf ("\ntypical usage\nsimevo -d /dev/video1 -m edgedetect -o width=640,height=480,threshold=100,verbose,lines=10,discrete=3,s]\n");
+	printf ("\nsimevo -d </dev/devname> -m complabeling -o [width=int,height=int,verbose,lines=int,discrete=3+3*int,s,bgthreshold=int,bgup,bgdown,discardlevel]\n");
+	printf ("\ncomplabeling - component labeling based method\n");
+	printf ("s - start server for lua module\n");
+	exit(0);
+	break;
+      case 'd':
+	m_cla->device = optarg;
+	break;
+      case 'm':
+	subopts = optarg;
+	while (*subopts != '\0')
+	  switch (getsubopt (&subopts, me_opts, &value))
+	    {
+	    case EDGEDETECT_OPT:
+	      m_cla->method = ECV_EDGEDETECT;
+	      break;
+	    case COMPLABELING_OPT:
+	      m_cla->method = ECV_COMPLABELING;
+	      break;
+	    case COMPLABELING_SIMP_OPT:
+	      m_cla->method = ECV_COMPLABELING_SIMP;
+	      break;
+	    case LIGHTS_OPT:
+	      m_cla->method = ECV_LIGHTS;
+	      break;
+	    default:
+	      printf ("Unknown method `%s'\n", value);
+	      break;
+	    }
+	//	m_cla->method = optarg;
+	break;
+      case 'o':
+	subopts = optarg;
+	while (*subopts != '\0')
+	  switch (getsubopt (&subopts, se_opts, &value))
+	    {
+	    case WIDTH_OPT:
+	      m_cla->width = atoi (value);
+	      break;
+	    case HEIGHT_OPT:
+	      m_cla->height = atoi (value);
+	      break;
+	    case THRESHOLD_OPT:
+	      m_cla->threshold = atoi (value);
+	      break;
+	    case VERBOSE_OPT:
+	      m_cla->debugwin = 1;
+	      break; 
+	    case NUMLINES_OPT:
+	      m_cla->numlines = atoi (value);
+	      break;
+	    case DISCRETE_OPT:
+	      m_cla->discrete = atoi (value);
+	      break;
+	    case SERV_OPT:
+	      m_cla->serv = 1;
+	      break;
+	    case GRAY_OPT:
+	      m_cla->gray = 1;
+	      m_cla->r = 0;
+	      m_cla->g = 0;
+	      m_cla->b = 0;
+	      break;
+	    case R_OPT:
+	      m_cla->gray = 0;
+	      m_cla->r = 1;
+	      m_cla->g = 0;
+	      m_cla->b = 0;
+	      break;
+	    case G_OPT:
+	      m_cla->gray = 0;
+	      m_cla->r = 0;
+	      m_cla->g = 1;
+	      m_cla->b = 0;
+	      break;
+	    case B_OPT:
+	      m_cla->gray = 0;
+	      m_cla->r = 0;
+	      m_cla->g = 0;
+	      m_cla->b = 1;
+	      break;
+	    case AVGCORR_OPT:
+	      m_cla->avgcorrection = atoi (value);
+	      break;
+	    default:
+	      /* Unknown suboption. */
+	      printf ("Unknown suboption `%s'\n", value);
+	      break;
+	    }
+	break;
+      default:
+	abort ();
+      }
+}
+
+
+
 struct carpad
 {
   int leftstickx;
@@ -214,9 +414,36 @@ static void *thread_func(void *vptr_args)
  
   return NULL;
 }
- 
-int main()
+
+int main (int argc, char **argv)
 {
+  ecv_params par;
+
+  par.quit=0;
+
+  ecv_cla mcla;
+
+  ecv_clainit(argc, argv, &mcla);
+
+  printf("******************************\n");
+  printf("trying to create pipe:\n");
+  printf("width = %i\n", mcla.width);
+  printf("height = %i\n", mcla.height);
+  printf("device = %s\n", mcla.device);
+  printf("******************************\n");
+
+
+  ecv_initlines(&mcla, &par.mbase);
+  par.mbase.roottree = NULL;
+  
+  ecv_create_src_pipeline(&mcla, &par);
+
+
+
+
+
+
+
   titc.leftstickx=0;
   titc.leftsticky=0;
   titc.rightstickx=0;
@@ -242,10 +469,10 @@ int main()
 
   pthread_t thread;
   
-  if (pthread_create(&thread, NULL, thread_func, NULL) != 0)
+  /*  if (pthread_create(&thread, NULL, thread_func, NULL) != 0)
     {
       return EXIT_FAILURE;
-    }
+      }*/
 
   sleep(1);   /* give server time to reply */
   unsigned short head;
@@ -255,12 +482,39 @@ int main()
   ret = lockusb(&sd);
   printf ("lockusb = %i\n", ret);
   locked = 1;
-  
-  while(1)
+
+
+  if (ecv_play(par.s_app.pipe_pro)!=0)
+    return -1;
+
+  GstBuffer *buf;
+  unsigned int ctr = 0;
+
+  while (!gst_app_sink_is_eos (GST_APP_SINK (par.s_app.sink)) && par.quit == 0) 
     {
+      buf = gst_app_sink_pull_buffer (GST_APP_SINK (par.s_app.sink));
+      //      printf ("retrieved buffer %p\n", buf);
+      if (buf != NULL)
+	{
+	  printf ("retrieved buffer %i\n", ctr);
+	  ctr = ctr+1;
+	  //	  printf("size = %i\n", buf->size);
+
+	  if (mcla.method == ECV_EDGEDETECT)
+	    ecv_edgedetect(buf->data, buf->size, &mcla, &par);
+	  else if (mcla.method == ECV_COMPLABELING)
+	    ecv_complabeling(buf->data, buf->size, &mcla, &par);
+	  else if (mcla.method == ECV_COMPLABELING_SIMP)
+	    ecv_complabeling_dumb(buf->data, buf->size, &mcla, &par);
+
+	  gst_buffer_unref (buf);
+	}
       sendpwm(&sd);
+      printf ("offset=%i\n", par.offset);
       usleep(50000);
     }
+  ecv_stop(par.s_app.pipe_pro);
+
   ret = unlockusb(&sd);
   printf ("unlockusb = %i\n", ret);
   locked = 0;
