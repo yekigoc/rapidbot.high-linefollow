@@ -193,8 +193,22 @@ int unlockusb(int * sd)
 
 static void *thread_func(void *vptr_args)
 {
+  int xctr = 0;
+  int yctr = 0;
+  int a = 1;
+  int m = 5;
   while (1)
     {
+      if (yctr>32767)
+	{
+	  a=-a;
+	}
+      else if(yctr<-32767)
+	{
+	  a=-a;
+	}
+      yctr += m*a;
+      
       usleep(10000);
     }
  
