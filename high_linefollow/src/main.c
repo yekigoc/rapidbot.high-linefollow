@@ -8,9 +8,15 @@
 #include <usbcommon.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <joystick.h>
 #include <pthread.h>
 
+struct carpad
+{
+  int leftstickx;
+  int leftsticky;
+  int rightstickx;
+  int rightsticky;
+};
 
 #define MYID 10
 #define c1 (double)104.0/32767.0
@@ -18,7 +24,6 @@
 //#define c2 (double)125.0/32767.0
 #define c2 (double)30.0/32767.0
 
-struct js_event jse;
 int fd;
 int rc;
 struct carpad titc;
@@ -190,58 +195,6 @@ static void *thread_func(void *vptr_args)
 {
   while (1)
     {
-      rc = read_joystick_event(&jse);
-
-      if (rc == 1) 
-	{
-	  if (jse.type != 129)
-	    {
-	      switch (jse.number) {
-	      case 0: 
-		if (jse.type==2)
-		  {
-		    if (jse.value==0)
-		      titc.leftstickx=0;
-		    else
-		      titc.leftstickx = jse.value;
-		  }
-		break;
-	      case 3:
-		if (jse.type==2)		 
-		  {
-		    if (jse.value==0)
-		      titc.rightsticky = 0;
-		    else
-		      titc.rightsticky = -jse.value;
-		  }
-		break;
-	      case 7:
-		if (jse.type == 1)
-		  {
-		    if (pressed1 ==0)
-		      pressed1 = 1;
-		    else if (pressed1 ==1)
-			  pressed1 = 0;
-		  }
-		break;
-	      default:
-		break;
-	      }
-	    }
-	  printf("Event: time %8u, value %8hd, type: %3u, axis/button: %u\n", 
-		 jse.time, jse.value, jse.type, jse.number);
-	  printf("leftx %i, lefty %i, rightx %i, righty %i\n",
-	  titc.leftstickx, titc.leftsticky, titc.rightstickx, titc.rightsticky);
-	}
-      else
-	{
-	  /*printf ("lost connection\n");
-	    titc.rightstickx = 0;
-	    titc.rightsticky = 0;
-	    titc.leftstickx = 0;
-	    titc.leftsticky = 0;*/
-	}
-
       usleep(10000);
     }
  
@@ -250,13 +203,6 @@ static void *thread_func(void *vptr_args)
  
 int main()
 {
-
-  fd = open_joystick("/dev/input/js0");
-  if (fd < 0) {
-    printf("open failed.\n");
-    exit(1);
-  }
-
   titc.leftstickx=0;
   titc.leftsticky=0;
   titc.rightstickx=0;
@@ -292,28 +238,18 @@ int main()
   int locked = 0;
   int ret = 0;
   login(&sd);
-    while(1)
-      {
-	//	printf ("pressed1 = %i\n", pressed1);
-	if (pressed1 == 1 && locked == 0)
-	  {
-	    ret = lockusb(&sd);
-	    printf ("lockusb = %i\n", ret);
-	    locked = 1;
-	  }
-	else if (pressed1 == 0 && locked == 1 )
-	  {
-	    ret = unlockusb(&sd);
-	    printf ("unlockusb = %i\n", ret);
-	    locked = 0;
-	  }
-
-	if (locked == 1)
-	  {
-	    sendpwm(&sd);
-	  }
-	
-	usleep(50000);
-      }
+  ret = lockusb(&sd);
+  printf ("lockusb = %i\n", ret);
+  locked = 1;
+  
+  while(1)
+    {
+      sendpwm(&sd);
+      usleep(50000);
+    }
+  ret = unlockusb(&sd);
+  printf ("unlockusb = %i\n", ret);
+  locked = 0;
+  
   close(sd);
 }
