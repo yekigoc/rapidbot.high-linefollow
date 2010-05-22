@@ -1,0 +1,6 @@
+#include "sdlutils.h"
+#include "gstutils.h"
+#include "hashutils.h"
+#include "edgedetect.h"
+#include "complabeling.h"
+#include "complabeling_dumb.h"
