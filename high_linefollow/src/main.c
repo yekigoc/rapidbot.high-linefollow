@@ -514,7 +514,7 @@ int main (int argc, char **argv)
 	  gst_buffer_unref (buf);
 	}
 
-      switch state
+      switch (state)
       {
       case 1:
 	if (par.offset>170)
