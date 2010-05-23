@@ -254,8 +254,8 @@ int sendpwm(int *sd)
   Rgi__Setpwmchan pwmchan = RGI__SETPWMCHAN__INIT;
   pwmchan.channel = 0;
   double k1 = ((double)titc.leftstickx);
-  pwmchan.value = 396+k1*(c1);
-  double pm = 396.0+k1*(c1);
+  pwmchan.value = 396+k1;
+  double pm = 396.0+k1;
   pmsg("channel 0 = %f\n", pm);
   unsigned short sz = rgi__setpwmchan__get_packed_size(&pwmchan);
   char * buffer = (char*)malloc(sz*(sizeof(char)));
@@ -518,13 +518,13 @@ int main (int argc, char **argv)
       {
       case 1:
 	if (par.offset>170)
-	  titc.leftstickx=15000;
+	  titc.leftstickx=50;
 	else if (par.offset>200)
-	  titc.leftstickx=32767;
+	  titc.leftstickx=100;
 	else if (par.offset<130)
-	  titc.leftstickx=-15000;
+	  titc.leftstickx=-50;
 	else if (par.offset<100) 
-	  titc.leftstickx=-32767;
+	  titc.leftstickx=-100;
 	else if (par.offset == 0)
 	  titc.leftstickx=0;
       }
