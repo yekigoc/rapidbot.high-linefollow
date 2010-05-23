@@ -519,11 +519,11 @@ int main (int argc, char **argv)
       case 1:
 	if (par.offset>170 && par.offset<200)
 	  titc.leftstickx=50;
-	else if (par.offset>200)
+	else if (par.offset>=200)
 	  titc.leftstickx=100;
-	else if (par.offset<130 && par.offset>100)
+	else if (par.offset<130 && par.offset>=100)
 	  titc.leftstickx=-50;
-	else if (par.offset<100) 
+	else if (par.offset<100 && par.offset >0) 
 	  titc.leftstickx=-100;
 	else if (par.offset == 0)
 	  titc.leftstickx=0;
