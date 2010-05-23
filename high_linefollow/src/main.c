@@ -490,6 +490,10 @@ int main (int argc, char **argv)
   GstBuffer *buf;
   unsigned int ctr = 0;
 
+  int state = 1;
+  //1 - linefollow
+  //2 - collision avoid
+
   while (!gst_app_sink_is_eos (GST_APP_SINK (par.s_app.sink)) && par.quit == 0) 
     {
       buf = gst_app_sink_pull_buffer (GST_APP_SINK (par.s_app.sink));
@@ -509,6 +513,23 @@ int main (int argc, char **argv)
 
 	  gst_buffer_unref (buf);
 	}
+
+      switch state
+      {
+      case 1:
+	if (par.offset>170)
+	  titc.leftstickx=15000;
+	else if (par.offset>200)
+	  titc.leftstickx=32767;
+	else if (par.offset<130)
+	  titc.leftstickx=-15000;
+	else if (par.offset<100) 
+	  titc.leftstickx=-32767;
+	else if (par.offset == 0)
+	  titc.leftstickx=0;
+      }
+
+
       sendpwm(&sd);
       printf ("offset=%i\n", par.offset);
       usleep(50000);
